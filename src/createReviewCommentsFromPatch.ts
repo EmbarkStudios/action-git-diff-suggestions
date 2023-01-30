@@ -31,10 +31,6 @@ export async function createReviewCommentsFromPatch({
 
   const patches = parseGitPatch(gitDiff);
 
-  if (!patches.length) {
-    return;
-  }
-
   // Delete existing review comments from this bot
   await deleteOldReviewComments({
     octokit,
@@ -44,22 +40,20 @@ export async function createReviewCommentsFromPatch({
     pullRequest,
   });
 
-  // Need to call these APIs serially, otherwise face API errors from
-  // GitHub about having multiple pending review requests
+  if (!patches.length) {
+    return;
+  }
+
+  let comments = [];
   for (const patch of patches) {
-    try {
-      await octokit.pulls.createReviewComment({
-        owner,
-        repo,
-        pull_number: pullRequest,
+    comments.push({
+        path: patch.removed.file,
         body: `${commentBody}:
 
 \`\`\`suggestion
 ${patch.added.lines.join('\n')}
 \`\`\`
 `,
-        commit_id: commitId,
-        path: patch.removed.file,
         side: 'RIGHT',
         start_side: 'RIGHT',
         start_line:
@@ -67,13 +61,23 @@ ${patch.added.lines.join('\n')}
             ? patch.removed.start
             : undefined,
         line: patch.removed.end,
-        mediaType: {
-          previews: ['comfort-fade'],
-        },
-      });
-    } catch (err) {
-      core.error(err);
-      throw err;
-    }
+    });
+  }
+
+  try {
+    await octokit.pulls.createReview({
+      owner,
+      repo,
+      pull_number: pullRequest,
+      commit_id: commitId,
+      event: "APPROVE",
+      comments,
+      mediaType: {
+        previews: ['comfort-fade'],
+      },
+    });
+  } catch (err) {
+    core.error(err);
+    throw err;
   }
 }
