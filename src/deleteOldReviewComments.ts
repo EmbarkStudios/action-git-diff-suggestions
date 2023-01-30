@@ -3,6 +3,7 @@ import * as github from '@actions/github';
 type Octokit = ReturnType<typeof github.getOctokit>;
 
 type Params = {
+  botNick: string | null;
   octokit: Octokit;
   owner: string;
   repo: string;
@@ -16,7 +17,12 @@ export async function deleteOldReviewComments({
   repo,
   commentBody,
   pullRequest,
+  botNick,
 }: Params) {
+  if (botNick === null) {
+    return;
+  }
+
   // Delete existing review comments from this bot
   const existingReviews = await octokit.pulls.listReviewComments({
     owner,
@@ -24,12 +30,11 @@ export async function deleteOldReviewComments({
     pull_number: pullRequest,
   });
 
-  return Promise.all(
+  await Promise.all(
     existingReviews?.data
       .filter(
         review =>
-          review.user.login === 'github-actions[bot]' &&
-          review.body.includes(commentBody)
+          review.user.login === botNick && review.body.includes(commentBody)
       )
       .map(async review =>
         octokit.pulls.deleteReviewComment({

@@ -14,6 +14,7 @@ type Params = {
   gitDiff: string;
   pullRequest: number;
   commitId: string;
+  botNick: string | null;
 };
 
 export async function createReviewCommentsFromPatch({
@@ -24,6 +25,7 @@ export async function createReviewCommentsFromPatch({
   gitDiff,
   pullRequest,
   commitId,
+  botNick,
 }: Params) {
   if (!gitDiff) {
     return;
@@ -39,11 +41,12 @@ export async function createReviewCommentsFromPatch({
       repo,
       commentBody,
       pullRequest,
+      botNick,
     });
   } catch (err) {
     core.error(`Something went wrong when deleting old comments : ${err}
 
-{err.stack}`);
+${err.stack}`);
   }
 
   if (!patches.length) {
@@ -85,7 +88,7 @@ ${patch.added.lines.join('\n')}
   } catch (err) {
     core.error(`Something went wrong when posting the review: ${err}
 
-{err.stack}`);
+${err.stack}`);
     throw err;
   }
 }

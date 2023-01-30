@@ -10,6 +10,8 @@ inputs:
     default: ${{ github.token }}
   message:
     description: The message to prepend the review suggestion
+  botNick:
+    description: Github nick name for the bot account, used to remove previous comments
 runs:
   using: node12
   main: dist/index.js

@@ -25,6 +25,8 @@ async function run(): Promise<void> {
     core.getInput('message') ||
     'Something magical has suggested this change for you';
 
+  const botNick = core.getInput('botNick') || null;
+
   let gitDiff = '';
   let gitDiffError = '';
 
@@ -57,6 +59,7 @@ async function run(): Promise<void> {
       // @ts-ignore
       pullRequest: github.context.payload.pull_request?.number,
       commitId: GITHUB_EVENT.pull_request?.head.sha,
+      botNick,
     });
   } catch (err) {
     core.setFailed(err);

@@ -40,7 +40,7 @@ exports.createReviewCommentsFromPatch = void 0;
 const core = __importStar(__webpack_require__(2186));
 const parseGitPatch_1 = __webpack_require__(8120);
 const deleteOldReviewComments_1 = __webpack_require__(5302);
-function createReviewCommentsFromPatch({ octokit, owner, repo, commentBody, gitDiff, pullRequest, commitId, }) {
+function createReviewCommentsFromPatch({ octokit, owner, repo, commentBody, gitDiff, pullRequest, commitId, botNick, }) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!gitDiff) {
             return;
@@ -54,12 +54,13 @@ function createReviewCommentsFromPatch({ octokit, owner, repo, commentBody, gitD
                 repo,
                 commentBody,
                 pullRequest,
+                botNick,
             });
         }
         catch (err) {
             core.error(`Something went wrong when deleting old comments : ${err}
 
-{err.stack}`);
+${err.stack}`);
         }
         if (!patches.length) {
             return;
@@ -98,7 +99,7 @@ ${patch.added.lines.join('\n')}
         catch (err) {
             core.error(`Something went wrong when posting the review: ${err}
 
-{err.stack}`);
+${err.stack}`);
             throw err;
         }
     });
@@ -124,15 +125,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.deleteOldReviewComments = void 0;
-function deleteOldReviewComments({ octokit, owner, repo, commentBody, pullRequest, }) {
+function deleteOldReviewComments({ octokit, owner, repo, commentBody, pullRequest, botNick, }) {
     return __awaiter(this, void 0, void 0, function* () {
+        if (botNick === null) {
+            return;
+        }
         // Delete existing review comments from this bot
         const existingReviews = yield octokit.pulls.listReviewComments({
             owner,
             repo,
             pull_number: pullRequest,
         });
-        return Promise.all((existingReviews === null || existingReviews === void 0 ? void 0 : existingReviews.data.filter(review => review.user.login === 'github-actions[bot]' &&
+        yield Promise.all((existingReviews === null || existingReviews === void 0 ? void 0 : existingReviews.data.filter(review => review.user.login === botNick &&
             review.body.includes(commentBody)).map((review) => __awaiter(this, void 0, void 0, function* () {
             return octokit.pulls.deleteReviewComment({
                 owner,
@@ -204,6 +208,7 @@ function run() {
         }
         const commentBody = core.getInput('message') ||
             'Something magical has suggested this change for you';
+        const botNick = core.getInput('botNick') || null;
         let gitDiff = '';
         let gitDiffError = '';
         try {
@@ -234,6 +239,7 @@ function run() {
                 // @ts-ignore
                 pullRequest: (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.number,
                 commitId: (_b = GITHUB_EVENT.pull_request) === null || _b === void 0 ? void 0 : _b.head.sha,
+                botNick,
             });
         }
         catch (err) {
