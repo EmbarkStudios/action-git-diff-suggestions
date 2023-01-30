@@ -44,24 +44,24 @@ export async function createReviewCommentsFromPatch({
     return;
   }
 
-  let comments = [];
+  const comments = [];
   for (const patch of patches) {
     comments.push({
-        path: patch.removed.file,
-        body: `${commentBody}:
+      path: patch.removed.file,
+      body: `${commentBody}:
 
 \`\`\`suggestion
 ${patch.added.lines.join('\n')}
 \`\`\`
 `,
-        side: 'RIGHT',
-        start_side: 'RIGHT',
-        start_line:
-          patch.removed.start !== patch.removed.end
-            ? patch.removed.start
-            : undefined,
-        line: patch.removed.end,
-    });
+      side: 'RIGHT',
+      start_side: 'RIGHT',
+      start_line:
+        patch.removed.start !== patch.removed.end
+          ? patch.removed.start
+          : undefined,
+      line: patch.removed.end,
+    } as any);
   }
 
   try {
@@ -70,7 +70,7 @@ ${patch.added.lines.join('\n')}
       repo,
       pull_number: pullRequest,
       commit_id: commitId,
-      event: "APPROVE",
+      event: 'APPROVE',
       comments,
       mediaType: {
         previews: ['comfort-fade'],

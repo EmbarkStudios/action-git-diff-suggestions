@@ -46,9 +46,6 @@ function createReviewCommentsFromPatch({ octokit, owner, repo, commentBody, gitD
             return;
         }
         const patches = parseGitPatch_1.parseGitPatch(gitDiff);
-        if (!patches.length) {
-            return;
-        }
         // Delete existing review comments from this bot
         yield deleteOldReviewComments_1.deleteOldReviewComments({
             octokit,
@@ -57,37 +54,43 @@ function createReviewCommentsFromPatch({ octokit, owner, repo, commentBody, gitD
             commentBody,
             pullRequest,
         });
-        // Need to call these APIs serially, otherwise face API errors from
-        // GitHub about having multiple pending review requests
+        if (!patches.length) {
+            return;
+        }
+        let comments = [];
         for (const patch of patches) {
-            try {
-                yield octokit.pulls.createReviewComment({
-                    owner,
-                    repo,
-                    pull_number: pullRequest,
-                    body: `${commentBody}:
+            comments.push({
+                path: patch.removed.file,
+                body: `${commentBody}:
 
 \`\`\`suggestion
 ${patch.added.lines.join('\n')}
 \`\`\`
 `,
-                    commit_id: commitId,
-                    path: patch.removed.file,
-                    side: 'RIGHT',
-                    start_side: 'RIGHT',
-                    start_line: patch.removed.start !== patch.removed.end
-                        ? patch.removed.start
-                        : undefined,
-                    line: patch.removed.end,
-                    mediaType: {
-                        previews: ['comfort-fade'],
-                    },
-                });
-            }
-            catch (err) {
-                core.error(err);
-                throw err;
-            }
+                side: 'RIGHT',
+                start_side: 'RIGHT',
+                start_line: patch.removed.start !== patch.removed.end
+                    ? patch.removed.start
+                    : undefined,
+                line: patch.removed.end,
+            });
+        }
+        try {
+            yield octokit.pulls.createReview({
+                owner,
+                repo,
+                pull_number: pullRequest,
+                commit_id: commitId,
+                event: "APPROVE",
+                comments,
+                mediaType: {
+                    previews: ['comfort-fade'],
+                },
+            });
+        }
+        catch (err) {
+            core.error(err);
+            throw err;
         }
     });
 }
