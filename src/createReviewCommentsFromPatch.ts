@@ -32,19 +32,25 @@ export async function createReviewCommentsFromPatch({
   const patches = parseGitPatch(gitDiff);
 
   // Delete existing review comments from this bot
-  await deleteOldReviewComments({
-    octokit,
-    owner,
-    repo,
-    commentBody,
-    pullRequest,
-  });
+  try {
+    await deleteOldReviewComments({
+      octokit,
+      owner,
+      repo,
+      commentBody,
+      pullRequest,
+    });
+  } catch (err) {
+    core.error(`Something went wrong when deleting old comments : ${err}
+
+{err.stack}`);
+  }
 
   if (!patches.length) {
     return;
   }
 
-  const comments = [];
+  const comments: any[] = [];
   for (const patch of patches) {
     comments.push({
       path: patch.removed.file,
@@ -61,7 +67,7 @@ ${patch.added.lines.join('\n')}
           ? patch.removed.start
           : undefined,
       line: patch.removed.end,
-    } as any);
+    });
   }
 
   try {
@@ -77,7 +83,9 @@ ${patch.added.lines.join('\n')}
       },
     });
   } catch (err) {
-    core.error(err);
+    core.error(`Something went wrong when posting the review: ${err}
+
+{err.stack}`);
     throw err;
   }
 }
